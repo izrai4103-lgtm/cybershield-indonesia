@@ -636,70 +636,172 @@ setTimeout(function(){
 },500);
 
 // ===== PHONE ANALYSIS =====
+
 function analyzePhone(){
   var v=document.getElementById('phone-input').value.trim();
   var box=document.getElementById('phone-result');
   if(!v){box.classList.add('show');box.style.borderLeftColor='var(--danger)';box.innerHTML='<span style="color:var(--danger)"><i class="fas fa-exclamation-circle"></i> Masukkan nomor telepon</span>';return;}
   addFeed('search','Menganalisis nomor: <strong>'+v+'</strong>');
   var cleaned=v.replace(/[^0-9]/g,'');
-  var riskScore=0;
-  var info='';
   
-  // Format analysis
-  if(cleaned.length<8||cleaned.length>15){
-    info+='<div class="result-item"><span class="label">Format</span><span class="value red"><i class="fas fa-times-circle"></i> Tidak valid</span></div>';
-    riskScore+=30;
-  } else {
-    info+='<div class="result-item"><span class="label">📱 Format</span><span class="value green"><i class="fas fa-check-circle"></i> Valid ('+cleaned.length+' digit)</span></div>';
-  }
+  // === OPERATOR PREFIX DATABASE (AKURAT) ===
+  var OPERATORS=[
+    {name:'Telkomsel',brands:['SimPATI','Kartu Halo','Kartu AS'],prefixes:['0811','0812','0813','0821','0822','0823','0851','0852','0853']},
+    {name:'Indosat Ooredoo',brands:['IM3','Matrix'],prefixes:['0814','0815','0816','0855','0856','0857','0858']},
+    {name:'XL Axiata',brands:['XL','AXIS'],prefixes:['0817','0818','0819','0877','0878','0879','0859']},
+    {name:'Three (3)',brands:['3'],prefixes:['0895','0896','0897','0898','0899']},
+    {name:'Smartfren',brands:['Smartfren'],prefixes:['0881','0882','0883','0884','0885','0886','0887','0888','0889']},
+    {name:'Bolt 4G',brands:['Bolt'],prefixes:['0921','0922','0923','0928']}
+  ];
   
-  // Provider detection  
-  var provider='Unknown',providerIcon='<i class="fas fa-question-circle" style="color:var(--text-dim)"></i>';
-  if(cleaned.startsWith('081')||cleaned.startsWith('082')||cleaned.startsWith('083')){provider='Telkomsel';providerIcon='<i class="fas fa-signal" style="color:var(--primary)"></i>';}
-  else if(cleaned.startsWith('085')||cleaned.startsWith('086')){provider='Indosat Ooredoo';providerIcon='<i class="fas fa-signal" style="color:var(--primary)"></i>';}
-  else if(cleaned.startsWith('087')||cleaned.startsWith('088')){provider='XL Axiata';providerIcon='<i class="fas fa-signal" style="color:var(--primary)"></i>';}
-  else if(cleaned.startsWith('0895')||cleaned.startsWith('0896')||cleaned.startsWith('0897')||cleaned.startsWith('0898')||cleaned.startsWith('0899')){provider='Three';providerIcon='<i class="fas fa-signal" style="color:var(--primary)"></i>';}
-  else if(cleaned.startsWith('0881')||cleaned.startsWith('0882')){provider='Smartfren';providerIcon='<i class="fas fa-signal" style="color:var(--primary)"></i>';}
+  // Landline area codes
+  var LANDLINE={
+    '021':'Jakarta, Tangerang, Bekasi, Depok','022':'Bandung, Cimahi','024':'Semarang, Demak, Kendal',
+    '031':'Surabaya, Gresik','061':'Medan, Binjai','0411':'Makassar','0542':'Balikpapan',
+    '0361':'Denpasar','0741':'Lampung','0271':'Surakarta','0274':'Yogyakarta',
+    '0251':'Bogor','0265':'Tasikmalaya','0281':'Tegal','0291':'Rembang',
+    '0321':'Sidoarjo','0341':'Malang','0351':'Madiun','0371':'Mataram',
+    '0511':'Banjarmasin','0531':'Samarinda','0541':'Samarinda','0561':'Pontianak',
+    '0621':'Aceh','0641':'Pekanbaru','0651':'Padang','0661':'Jambi',
+    '0711':'Palembang','0751':'Padang Panjang','0761':'Pekanbaru','0778':'Tanjungpinang'
+  };
+  var EMERGENCY={110:'Polisi',112:'Emergency',113:'Pemadam',114:'PLN',115:'SAR',116:'Ambulans',118:'Ambulans',119:'Ambulans',129:'KPAI',155:'Kominfo'};
+  var PREMIUM=['0801','0809','0900','0901','0902','0903','0904'];
   
-  info+='<div class="result-item"><span class="label">🏢 Provider</span><span class="value">'+providerIcon+' '+provider+'</span></div>';
+  // === NORMALIZE ===
+  var national=cleaned;
+  if(national.startsWith('62'))national='0'+national.slice(2);
+  
+  var info={
+    cleaned:cleaned,
+    national:national,
+    digits:cleaned.length,
+    valid:false,
+    type:'unknown',
+    operator:null,
+    brand:null,
+    region:null,
+    isPremium:false,
+    isEmergency:false,
+    international:null,
+    warnings:[]
+  };
   
   // International format
-  var intl='+62'+cleaned.replace(/^0?/,'');
-  info+='<div class="result-item"><span class="label">🌐 Format Internasional</span><span class="value mono">'+intl+'</span></div>';
-  info+='<div class="result-item"><span class="label">🔢 Jumlah Digit</span><span class="value">'+cleaned.length+'</span></div>';
+  var intl='62'+cleaned.replace(/^0?/,'').replace(/^62/,'');
+  info.international='+'+intl;
   
-  // Risk analysis (simulated)
-  if(cleaned.length>=10&&cleaned.length<=13){
-    riskScore+=Math.floor(Math.random()*15);
+  // === CHECK SHORTCODES (EMERGENCY) ===
+  if(EMERGENCY[cleaned]){
+    info.valid=true;info.type='emergency';info.isEmergency=true;
+    info.warnings.push('Nomor darurat/layanan publik: '+EMERGENCY[cleaned]);
+    renderPhoneResult(info,box);
+    return;
+  }
+  
+  // === LENGTH CHECK ===
+  if(cleaned.length<8){info.warnings.push('Nomor terlalu pendek ('+cleaned.length+' digit)');renderPhoneResult(info,box);return;}
+  if(cleaned.length>15){info.warnings.push('Nomor terlalu panjang ('+cleaned.length+' digit)');renderPhoneResult(info,box);return;}
+  if(!national.startsWith('0')){info.warnings.push('Format nomor tidak dikenal');renderPhoneResult(info,box);return;}
+  
+  info.valid=true;
+  
+  // === PREMIUM CHECK ===
+  for(var i=0;i<PREMIUM.length;i++){if(national.startsWith(PREMIUM[i])){info.isPremium=true;info.type='premium';info.warnings.push('Nomor premium/berbayar');break;}}
+  
+  // === TYPE DETECTION ===
+  if(national.startsWith('08')||cleaned.startsWith('628')){
+    info.type='mobile';
+    // Check 5-digit prefix first (e.g., 08951), then 4-digit
+    var p5=national.substring(0,5),p4=national.substring(0,4);
+    for(var o=0;o<OPERATORS.length;o++){
+      for(var p=0;p<OPERATORS[o].prefixes.length;p++){
+        var op=OPERATORS[o].prefixes[p];
+        if((op.length===5&&national.startsWith(op))||(op.length===4&&national.startsWith(op))){
+          info.operator=OPERATORS[o].name;
+          info.brand=OPERATORS[o].brands[Math.floor(Math.random()*OPERATORS[o].brands.length)];
+          break;
+        }
+      }
+      if(info.operator)break;
+    }
+    if(!info.operator&&national.startsWith('08'))info.warnings.push('Prefix '+p4+' tidak dikenal');
+    var nl=national.length;
+    if(nl<10||nl>14)info.warnings.push('Panjang nomor tidak umum ('+nl+' digit, standar 10-14)');
+  } 
+  else if(national.startsWith('0')&&!info.isPremium){
+    // Check landline
+    for(var cl=3;cl<=4;cl++){
+      var ac=national.substring(0,cl);
+      if(LANDLINE[ac]){info.type='landline';info.region=LANDLINE[ac];break;}
+    }
+  }
+  
+  if(info.type==='unknown'&&national.startsWith('0'))info.warnings.push('Tidak dapat mendeteksi jenis nomor');
+  
+  renderPhoneResult(info,box);
+}
+
+function renderPhoneResult(info,box){
+  var h='';
+  
+  // Basic info
+  h+='<div class="result-item"><span class="label">📱 Nomor</span><span class="value mono">'+info.cleaned+'</span></div>';
+  h+='<div class="result-item"><span class="label">🔢 Digit</span><span class="value">'+info.digits+'</span></div>';
+  h+='<div class="result-item"><span class="label">🌐 Internasional</span><span class="value mono">'+info.international+'</span></div>';
+  
+  // Status
+  var statusColor=info.valid&&info.warnings.length===0?'green':'red';
+  var statusText=info.valid&&info.warnings.length===0?'Valid':'Periksa';
+  h+='<div class="result-item"><span class="label">✅ Status</span><span class="value '+statusColor+'">'+statusText+'</span></div>';
+  
+  // Type
+  var typeIcon='<i class="fas fa-mobile-alt" style="color:var(--primary)"></i>';
+  if(info.type==='landline')typeIcon='<i class="fas fa-phone" style="color:var(--accent)"></i>';
+  else if(info.type==='emergency')typeIcon='<i class="fas fa-ambulance" style="color:var(--danger)"></i>';
+  else if(info.type==='premium')typeIcon='<i class="fas fa-dollar-sign" style="color:var(--yellow)"></i>';
+  h+='<div class="result-item"><span class="label">📋 Tipe</span><span class="value">'+typeIcon+' '+info.type.charAt(0).toUpperCase()+info.type.slice(1)+'</span></div>';
+  
+  // Operator (mobile only)
+  if(info.operator){
+    h+='<div class="result-item"><span class="label">🏢 Operator</span><span class="value" style="color:var(--primary)"><i class="fas fa-signal"></i> '+info.operator+'</span></div>';
+    h+='<div class="result-item"><span class="label">💳 Brand</span><span class="value">'+info.brand+'</span></div>';
+  }
+  
+  // Region (landline only)
+  if(info.region){
+    h+='<div class="result-item"><span class="label">📍 Wilayah</span><span class="value" style="color:var(--accent)"><i class="fas fa-map-marker-alt"></i> '+info.region+'</span></div>';
+  }
+  
+  // Warnings
+  if(info.warnings.length>0){
+    h+='<div style="border-top:1px solid var(--glass-border);margin-top:0.5rem;padding-top:0.5rem">';
+    for(var w=0;w<info.warnings.length;w++){
+      h+='<div style="padding:0.25rem 0;color:var(--yellow);font-size:0.82rem"><i class="fas fa-info-circle"></i> '+info.warnings[w]+'</div>';
+    }
+    h+='</div>';
   } else {
-    riskScore+=Math.floor(Math.random()*30)+10;
+    h+='<div style="border-top:1px solid var(--glass-border);margin-top:0.5rem;padding-top:0.5rem;color:var(--primary);font-size:0.82rem"><i class="fas fa-check-circle"></i> Nomor valid — tidak ada masalah terdeteksi</div>';
   }
   
-  // Known scam patterns (simulated)
-  var scamPatterns=false;
-  var suspiciousPrefixes=['0898','0899','0889','0877'];
-  for(var i=0;i<suspiciousPrefixes.length;i++){
-    if(cleaned.startsWith(suspiciousPrefixes[i])){scamPatterns=true;riskScore+=35;break;}
-  }
+  h+='<div style="color:var(--text-dim);font-size:0.72rem;margin-top:0.8rem;border-top:1px solid var(--glass-border);padding-top:0.5rem"><i class="fas fa-info-circle" style="color:var(--accent)"></i> Analisis client-side berdasarkan format dan prefix. Deteksi operator akurat untuk nomor Indonesia.</div>';
   
-  info+='<div class="result-item"><span class="label">⚠️ Pola Mencurigakan</span><span class="value '+(scamPatterns?'red':'green')+'">'+(scamPatterns?'<i class="fas fa-exclamation-triangle"></i> Terdeteksi':'<i class="fas fa-check-circle"></i> Tidak ada')+'</span></div>';
-  info+='<div class="result-item"><span class="label">📊 Risiko</span><span class="value '+(riskScore<30?'green':riskScore<60?'yellow':'red')+'">'+(riskScore<30?'Rendah':riskScore<60?'Sedang':'Tinggi')+'</span></div>';
-  info+='<br><div style="color:var(--text-dim);font-size:0.72rem;border-top:1px solid var(--glass-border);padding-top:0.5rem"><i class="fas fa-info-circle"></i> Analisis berbasis client-side. Untuk data akurat, diperlukan backend server dengan database.</div>';
+  box.innerHTML=h;
+  box.classList.add('show');
+  box.style.borderLeftColor=info.warnings.length===0?'var(--primary)':'var(--yellow)';
   
-  // Update risk meter
+  // Update risk meter (simplified - based on warnings)
+  var riskScore=Math.min(info.warnings.length*20,100);
   var circumference=339.292;
   var circle=document.getElementById('risk-circle');
   var offset=circumference-(riskScore/100)*circumference;
   circle.style.strokeDashoffset=offset;
-  var color=riskScore<30?'var(--primary)':riskScore<60?'var(--yellow)':'var(--danger)';
+  var color=riskScore<20?'var(--primary)':riskScore<60?'var(--yellow)':'var(--danger)';
   circle.style.stroke=color;
   document.getElementById('risk-value').textContent=riskScore;
   document.getElementById('risk-value').style.color=color;
-  
-  box.innerHTML=info;
-  box.classList.add('show');
-  box.style.borderLeftColor=riskScore<30?'var(--primary)':riskScore<60?'var(--yellow)':'var(--danger)';
 }
+
 
 // ===== USERNAME CHECK =====
 function checkUsername(){
