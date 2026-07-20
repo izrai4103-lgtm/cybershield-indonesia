@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CyberShield Indonesia — REAL-TIME Protection System</title>
+
+<!-- Fonts: Orbitron + Inter + JetBrains Mono -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="/static/style.css">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+</head>
+<body>
+
+<!-- Background layers -->
+<div class="grid-overlay"></div>
+<div class="vignette"></div>
+<div class="scanline"></div>
+<div class="laser"></div>
+
+<header class="hero">
+<div class="hero-content">
+<h1><i class="fas fa-shield-alt"></i> CyberShield Indonesia</h1>
+<p class="tagline">⚡ REAL-TIME Protection System — Kejahatan Seksual • Penipuan • Kekerasan • Digital</p>
+<div class="hero-badges">
+<span class="hero-badge green"><i class="fas fa-database"></i> OSINT Engine</span>
+<span class="hero-badge blue"><i class="fas fa-bolt"></i> Real-Time</span>
+<span class="hero-badge red"><i class="fas fa-satellite-dish"></i> Live Broadcast</span>
+</div>
+<div class="live-indicator">
+<span class="live-dot"></span>
+<span class="live-text">LIVE · <span id="live-time">--:--:--</span></span>
+</div>
+<div class="stats-bar" id="stats-bar">
+<div class="stat"><span id="stat-reports">0</span><label>Total Laporan</label></div>
+<div class="stat"><span id="stat-checks">0</span><label>Pengecekan</label></div>
+<div class="stat"><span id="stat-time">--:--:--</span><label>Sistem</label></div>
+</div>
+</div>
+</header>
+
+<nav class="tabs">
+<button class="tab active" data-tab="phone"><i class="fas fa-phone"></i> Cek Nomor <span class="kbd">1</span></button>
+<button class="tab" data-tab="username"><i class="fas fa-at"></i> OSINT <span class="kbd">2</span></button>
+<button class="tab" data-tab="ip"><i class="fas fa-globe"></i> IP/Domain <span class="kbd">3</span></button>
+<button class="tab" data-tab="whois"><i class="fas fa-search"></i> WHOIS <span class="kbd">4</span></button>
+<button class="tab" data-tab="email"><i class="fas fa-envelope"></i> Email OSINT <span class="kbd">5</span></button>
+<button class="tab" data-tab="report"><i class="fas fa-flag"></i> Lapor <span class="kbd">6</span></button>
+<button class="tab" data-tab="feed"><i class="fas fa-list"></i> Live Feed <span class="kbd">7</span></button>
+<button class="tab" data-tab="edu"><i class="fas fa-book"></i> Edukasi <span class="kbd">8</span></button>
+</nav>
+
+<main class="container">
+
+<section class="tab-content active" id="phone" data-delay="1">
+<h2><i class="fas fa-phone-alt"></i> Analisis Nomor Telepon <span class="live-badge">REAL-TIME DB</span></h2>
+<p class="desc">Cek keaslian nomor, provider, wilayah, dan status penipuan dari database live. Tekan <span class="kbd">Enter</span> untuk eksekusi cepat.</p>
+<div class="input-group">
+<input type="text" id="phone-input" placeholder="08123456789 / +628123456789" autofocus/>
+<button onclick="checkPhone()"><i class="fas fa-search"></i> Analisis</button>
+</div>
+<div id="phone-result" class="result-box" style="display:none;"></div>
+</section>
+
+<section class="tab-content" id="username">
+<h2><i class="fas fa-at"></i> OSINT Username <span class="live-badge">10 PLATFORM</span></h2>
+<p class="desc">Lacak username di Instagram, X, TikTok, Facebook, YouTube, LinkedIn, GitHub, Telegram, Reddit, Threads.</p>
+<div class="input-group">
+<input type="text" id="username-input" placeholder="username_target"/>
+<button onclick="checkUsername()"><i class="fas fa-search"></i> Lacak</button>
+</div>
+<div id="username-result" class="result-box" style="display:none;"></div>
+</section>
+
+<section class="tab-content" id="ip">
+<h2><i class="fas fa-globe"></i> Lookup IP / Domain</h2>
+<p class="desc">Resolve domain ke IP dan reverse lookup — identifikasi server situs mencurigakan.</p>
+<div class="input-group">
+<input type="text" id="ip-input" placeholder="google.com / 8.8.8.8"/>
+<button onclick="checkIp()"><i class="fas fa-search"></i> Lookup</button>
+</div>
+<div id="ip-result" class="result-box" style="display:none;"></div>
+</section>
+
+<section class="tab-content" id="whois">
+<h2><i class="fas fa-search"></i> WHOIS Domain</h2>
+<p class="desc">Cek kepemilikan domain untuk identifikasi situs penipuan.</p>
+<div class="input-group">
+<input type="text" id="whois-input" placeholder="example.com"/>
+<button onclick="checkWhois()"><i class="fas fa-search"></i> Cek</button>
+</div>
+<div id="whois-result" class="result-box" style="display:none;"></div>
+</section>
+
+<section class="tab-content" id="email">
+<h2><i class="fas fa-envelope"></i> Email OSINT Scanner</h2>
+<p class="desc">Temukan akun terkait email di 100+ platform via holehe engine.</p>
+<div class="input-group">
+<input type="email" id="email-input" placeholder="target@gmail.com"/>
+<button onclick="checkEmail()"><i class="fas fa-search"></i> Scan</button>
+</div>
+<div id="email-result" class="result-box" style="display:none;"></div>
+</section>
+
+<section class="tab-content" id="report">
+<h2><i class="fas fa-flag"></i> Lapor Pelaku <span class="live-badge">BROADCAST REAL-TIME</span></h2>
+<p class="desc">Laporan langsung masuk ke feed live & broadcast ke semua pengguna secara real-time via WebSocket.</p>
+<div class="input-group"><input type="text" id="r-number" placeholder="📱 Nomor HP pelaku (opsional)"/></div>
+<div class="input-group"><input type="text" id="r-username" placeholder="👤 Username pelaku (opsional)"/></div>
+<div class="input-group"><input type="text" id="r-domain" placeholder="🌐 Domain/web pelaku (opsional)"/></div>
+<div class="input-group">
+<select id="r-category">
+<option>Penipuan</option>
+<option>Pelecehan Seksual</option>
+<option>Kekerasan</option>
+<option>Pencurian Data</option>
+<option>Lainnya</option>
+</select>
+</div>
+<div class="input-group"><textarea id="r-desc" placeholder="Deskripsi kejadian..."></textarea></div>
+<div class="input-group"><button class="danger" onclick="reportScam()"><i class="fas fa-paper-plane"></i> KIRIM LAPORAN → BROADCAST</button></div>
+<div id="report-result" class="result-box" style="display:none;"></div>
+<div class="emergency">
+<h3><i class="fas fa-phone-volume"></i> Kontak Darurat Nasional</h3>
+<ul>
+<li>Polisi: <strong>110</strong></li>
+<li>KPAI (Anak): <strong>129</strong></li>
+<li>LBH Apik: <strong>021-392-9840</strong></li>
+<li>Komnas Perempuan: <strong>026-523-5977</strong></li>
+<li>Report Cyber Kominfo: <strong>155</strong></li>
+<li>Patbm Polri: <strong>0711-357-777</strong></li>
+</ul>
+</div>
+</section>
+
+<section class="tab-content" id="feed">
+<h2><i class="fas fa-list"></i> Live Feed Laporan <span class="live-badge">REAL-TIME</span></h2>
+<p class="desc">Laporan masuk langsung dari pengguna — update otomatis tanpa refresh melalui WebSocket.</p>
+<div id="feed-list"><div class="result-box" style="text-align:center;color:var(--text-dim);">Memuat feed... <div class="spinner" style="margin:0.5rem auto;"></div></div></div>
+</section>
+
+<section class="tab-content" id="edu">
+<h2><i class="fas fa-book"></i> Edukasi Keamanan Digital</h2>
+<div class="edu-grid">
+<div class="edu-card"><h3><i class="fas fa-user-shield"></i> Lindungi Diri</h3><ul><li>Jangan bagikan foto/video pribadi</li><li>Aktifkan 2FA semua akun</li><li>Watermark konten Anda</li><li>Blokir & laporkan segera</li></ul></div>
+<div class="edu-card"><h3><i class="fas fa-money-bill-wave"></i> Hindari Penipuan</h3><ul><li>Waspada janji keuntungan instan</li><li>Verifikasi identitas dulu</li><li>Cek nomor sebelum transfer</li><li>Jangan klik link mencurigakan</li></ul></div>
+<div class="edu-card"><h3><i class="fas fa-lock"></i> Keamanan Akun</h3><ul><li>Password unik tiap situs</li><li>2FA wajib aktif</li><li>Review login berkala</li><li>Cabut akses tak dikenal</li></ul></div>
+<div class="edu-card"><h3><i class="fas fa-balance-scale"></i> Dasar Hukum</h3><ul><li>UU ITE 19/2016</li><li>UU TPKS 12/2022</li><li>KUHP 281-283</li><li>Siber Bareskrim</li></ul></div>
+</div>
+</section>
+
+</main>
+
+<footer>
+<p>© 2026 CyberShield Indonesia — REAL-TIME Protection System</p>
+<p class="disclaimer">Bukan lembaga resmi. Untuk laporan resmi hubungi 110 atau kantor polisi terdekat.</p>
+<p><a href="/admin">Admin Dashboard</a> · <span id="footer-time" style="color:var(--text-dim);font-size:0.75rem;"></span></p>
+</footer>
+
+<script src="/static/script.js?v=20260720"></script>
+<script>
+// Quick time
+setInterval(() => {
+    const f = document.getElementById('footer-time');
+    if (f) f.textContent = '🕐 ' + new Date().toLocaleString('id-ID', {timeZone:'Asia/Jakarta'});
+}, 1000);
+</script>
+</body>
+</html>
