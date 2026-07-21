@@ -50,15 +50,6 @@ h1,h2,h3,.tab,.live-text,.stat label,.tag,.live-badge,.cyber-text{font-family:'O
 code,.mono,.result-item .value{font-family:'JetBrains Mono','Fira Code',monospace}
 ::selection{background:var(--primary-dim);color:var(--primary)}
 
-/* ===== LOADING SCREEN ===== */
-#loader{position:fixed;top:0;left:0;width:100%;height:100%;background:var(--dark);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity 0.8s ease,visibility 0.8s ease}
-#loader.hidden{opacity:0;visibility:hidden;pointer-events:none}
-#loader .logo-text{font-family:'Orbitron',monospace;font-size:1.4rem;font-weight:900;background:linear-gradient(135deg,var(--primary),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:1.2rem;animation:pulse-text 1.5s ease-in-out infinite}
-#loader .bar-wrap{width:200px;height:3px;background:rgba(255,255,255,0.05);border-radius:3px;overflow:hidden}
-#loader .bar-fill{height:100%;width:0;background:linear-gradient(90deg,var(--primary),var(--accent),var(--primary));background-size:200% 100%;border-radius:3px;animation:loaderBar 1.8s ease-in-out forwards, shimmer 1.5s linear infinite}
-@keyframes loaderBar{0%{width:0%}30%{width:40%}60%{width:70%}100%{width:100%}}
-@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
-
 /* ===== CUSTOM CURSOR ===== */
 .cursor-dot{position:fixed;width:8px;height:8px;background:var(--primary);border-radius:50%;pointer-events:none;z-index:99999;mix-blend-mode:screen;transition:transform 0.1s,opacity 0.3s;transform:translate(-50%,-50%)}
 .cursor-ring{position:fixed;width:40px;height:40px;border:1.5px solid rgba(0,255,157,0.3);border-radius:50%;pointer-events:none;z-index:99998;mix-blend-mode:screen;transition:width 0.3s,height 0.3s,border-color 0.3s,opacity 0.3s;transform:translate(-50%,-50%)}
@@ -304,28 +295,6 @@ section.tab-content{padding:1rem}
 <body>
 <canvas id="particle-canvas"></canvas>
 <div class="grid-overlay"></div>
-<div id="loader">
-<script>
-// IMMEDIATE LOADER HIDE - runs before any other JS
-(function(){
-  var hide = function(){
-    var l = document.getElementById('loader');
-    if(l) {
-      l.classList.add('hidden');
-    }
-  };
-  // Try multiple strategies
-  if(document.readyState === 'complete') { setTimeout(hide, 1800); }
-  else if(document.readyState === 'interactive') { 
-    document.addEventListener('DOMContentLoaded', function(){ setTimeout(hide, 1800); });
-    // Also try immediately in case DOMContentLoaded already fired
-    setTimeout(hide, 2000);
-  }
-  // Ultimate fallback
-  setTimeout(hide, 3500);
-})();
-</script>
-<div class="logo-text">🛡️ CyberShield</div>
 <div class="bar-wrap"><div class="bar-fill"></div></div>
 </div>
 <div class="cursor-dot" id="cursor-dot"></div>
