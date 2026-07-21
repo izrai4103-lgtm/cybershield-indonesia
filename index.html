@@ -305,6 +305,26 @@ section.tab-content{padding:1rem}
 <canvas id="particle-canvas"></canvas>
 <div class="grid-overlay"></div>
 <div id="loader">
+<script>
+// IMMEDIATE LOADER HIDE - runs before any other JS
+(function(){
+  var hide = function(){
+    var l = document.getElementById('loader');
+    if(l) {
+      l.classList.add('hidden');
+    }
+  };
+  // Try multiple strategies
+  if(document.readyState === 'complete') { setTimeout(hide, 1800); }
+  else if(document.readyState === 'interactive') { 
+    document.addEventListener('DOMContentLoaded', function(){ setTimeout(hide, 1800); });
+    // Also try immediately in case DOMContentLoaded already fired
+    setTimeout(hide, 2000);
+  }
+  // Ultimate fallback
+  setTimeout(hide, 3500);
+})();
+</script>
 <div class="logo-text">🛡️ CyberShield</div>
 <div class="bar-wrap"><div class="bar-fill"></div></div>
 </div>
@@ -647,11 +667,21 @@ section.tab-content{padding:1rem}
 
 <script>
 // ===== LOADER =====
-window.addEventListener('DOMContentLoaded', function(){
-  setTimeout(function(){
-    document.getElementById('loader').classList.add('hidden');
-  }, 1800);
-});
+// Hide loader with smooth animation after page renders
+setTimeout(function(){
+  var loader = document.getElementById('loader');
+  if (loader) loader.classList.add('hidden');
+}, 2000);
+
+// Fallback: force hide loader after 4 seconds no matter what
+setTimeout(function(){
+  var loader = document.getElementById('loader');
+  if (loader && !loader.classList.contains('hidden')) {
+    loader.style.opacity = '0';
+    loader.style.visibility = 'hidden';
+    setTimeout(function(){ if(loader.parentNode) loader.parentNode.removeChild(loader); }, 500);
+  }
+}, 4000);
 
 // ===== CURSOR =====
 (function(){
